@@ -18,14 +18,14 @@ local expiry_date_str = os.date("!%Y-%m-%d", expiry_time) -- fecha legible UTC (
 
 -- Lista de cuentas
 local accounts = {
-	{user = "free", pass = "freeclick", expires = expiry_time},
-	{user = "NeonUser2", pass = "NeonPass2", expires = expiry_time},
-	{user = "NeonUser3", pass = "NeonPass3", expires = expiry_time},
-	{user = "NeonUser4", pass = "NeonPass4", expires = expiry_time},
-	{user = "NeonUser5", pass = "NeonPass5", expires = expiry_time},
-	{user = "NeonUser6", pass = "NeonPass6", expires = expiry_time},
-	{user = "NeonUser7", pass = "NeonPass7", expires = expiry_time},
-	{user = "NeonUser8", pass = "NeonPass8", expires = expiry_time},
+	{user = "Admin", pass = "nader765", expires = expiry_time},
+	{user = "NeonUser2", pass = "NeonPass70", expires = expiry_time},
+	{user = "NeonUser3", pass = "NeonPass80", expires = expiry_time},
+	{user = "NeonUser4", pass = "NeonPass90", expires = expiry_time},
+	{user = "NeonUser5", pass = "NeonPass100", expires = expiry_time},
+	{user = "NeonUser6", pass = "NeonPass200", expires = expiry_time},
+	{user = "NeonUser7", pass = "NeonPass300", expires = expiry_time},
+	{user = "NeonUser8", pass = "NeonPass400", expires = expiry_time},
 }
 
 -- (Opcional) función para encontrar cuenta válida
@@ -192,4 +192,5 @@ passBox.FocusLost:Connect(function(pressedEnter)
 		loginBtn.MouseButton1Click:Fire()
 	end
 end)
+
 
