@@ -18,7 +18,7 @@ local expiry_date_str = os.date("!%Y-%m-%d", expiry_time) -- fecha legible UTC (
 
 -- Lista de cuentas
 local accounts = {
-	{user = "NeonUser1", pass = "NeonPass1", expires = expiry_time},
+	{user = "free", pass = "freeclick", expires = expiry_time},
 	{user = "NeonUser2", pass = "NeonPass2", expires = expiry_time},
 	{user = "NeonUser3", pass = "NeonPass3", expires = expiry_time},
 	{user = "NeonUser4", pass = "NeonPass4", expires = expiry_time},
@@ -192,3 +192,4 @@ passBox.FocusLost:Connect(function(pressedEnter)
 		loginBtn.MouseButton1Click:Fire()
 	end
 end)
+
