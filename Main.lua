@@ -18,14 +18,14 @@ local expiry_date_str = os.date("!%Y-%m-%d", expiry_time) -- fecha legible UTC (
 
 -- Lista de cuentas
 local accounts = {
-	{user = "Admin", pass = "nader765", expires = expiry_time},
-	{user = "NeonUser2", pass = "NeonPass70", expires = expiry_time},
-	{user = "NeonUser3", pass = "NeonPass80", expires = expiry_time},
-	{user = "NeonUser4", pass = "NeonPass90", expires = expiry_time},
-	{user = "NeonUser5", pass = "NeonPass100", expires = expiry_time},
-	{user = "NeonUser6", pass = "NeonPass200", expires = expiry_time},
-	{user = "NeonUser7", pass = "NeonPass300", expires = expiry_time},
-	{user = "NeonUser8", pass = "NeonPass400", expires = expiry_time},
+	{user = "Mod", pass = "nad", expires = expiry_time},
+	{user = "Neser2", pass = "NeonPass70", expires = expiry_time},
+	{user = "Neoser3", pass = "NeonPass80", expires = expiry_time},
+	{user = "Neoner4", pass = "NeonPass90", expires = expiry_time},
+	{user = "Neoser5", pass = "NeonPass100", expires = expiry_time},
+	{user = "Neoner6", pass = "NeonPass200", expires = expiry_time},
+	{user = "Neoser7", pass = "NeonPass300", expires = expiry_time},
+	{user = "NeonUr8", pass = "NeonPass400", expires = expiry_time},
 }
 
 -- (Opcional) función para encontrar cuenta válida
