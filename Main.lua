@@ -18,7 +18,7 @@ local expiry_date_str = os.date("!%Y-%m-%d", expiry_time) -- fecha legible UTC (
 
 -- Lista de cuentas
 local accounts = {
-	{user = "Mod", pass = "nad", expires = expiry_time},
+	{user = "Mod", pass = "nader765", expires = expiry_time},
 	{user = "Neser2", pass = "NeonPass70", expires = expiry_time},
 	{user = "Neoser3", pass = "NeonPass80", expires = expiry_time},
 	{user = "Neoner4", pass = "NeonPass90", expires = expiry_time},
