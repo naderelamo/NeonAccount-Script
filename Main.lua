@@ -1,6 +1,5 @@
-```lua
 -- =============================================
--- NEONACCOUNTSHOP - PANEL DE CHEATS AVANZADO
+-- NeonAccountShop - Panel Completo y Funcional
 -- =============================================
 
 local Players = game:GetService("Players")
@@ -11,57 +10,44 @@ local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
+local Camera = workspace.CurrentCamera
 
--- --- CONFIGURACIÓN GLOBAL ---
+-- --- CONFIGURACIÓN ---
 local config = {
-    -- General
     PanelVisible = true,
-    PanelDraggable = true,
     PanelPosition = UDim2.new(0.5, -150, 0.5, -225),
-    ProfileName = LocalPlayer.Name,
-    ProfileAvatar = "https://www.roblox.com/headshot-thumbnail/image?userId="..LocalPlayer.UserId.."&width=150&height=150&format=png",
 
     -- Aimbot
-    AimbotEnabled = true,
-    AimbotKey = Enum.UserInputType.MouseButton2, -- Click derecho
+    AimbotEnabled = false,
+    AimbotKey = Enum.UserInputType.MouseButton2, -- Click derecho para apuntar
     AimbotFOV = 90,
     AimbotSmoothness = 0.15,
     AimbotLockPart = "Head",
-    AimbotWallCheck = true,
-    AimbotTeamCheck = false,
-    AimbotAliveCheck = true,
 
     -- ESP
-    ESPEnabled = true,
-    ESPDisplayDistance = true,
-    ESPDisplayHealth = true,
-    ESPDisplayName = true,
-    ESPOutline = true,
-    ESPRainbowColor = false,
+    ESPEnabled = false,
     ESPColor = Color3.fromRGB(255, 0, 0),
-    ESPOutlineColor = Color3.fromRGB(0, 255, 0),
-    ESPThickness = 1,
-    ESPTransparency = 0.8,
-    ESPPosition = "Bottom",
 
     -- Crosshair
     CrosshairEnabled = true,
     CrosshairColor = Color3.fromRGB(255, 255, 255),
-    CrosshairThickness = 2,
-    CrosshairSize = 10,
-    CrosshairFilled = false,
-
-    -- Settings
-    RainbowSpeed = 10,
-    RenderStepped = true,
-    UpdateMode = "RenderStepped",
-    TeamColor = Color3.fromRGB(0, 255, 255)
 }
 
+-- --- DIBUJOS (PARA ESP Y CROSSHAIR) ---
+local Crosshair = Drawing.new("Circle")
+Crosshair.Visible = config.CrosshairEnabled
+Crosshair.Radius = 3
+Crosshair.Color = config.CrosshairColor
+Crosshair.Thickness = 2
+Crosshair.Filled = false
+
+local espCache = {}
+
 -- --- GUI SETUP ---
-local PlayersGui = Instance.new("ScreenGui")
-PlayersGui.Name = "NeonAccountShop"
-PlayersGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "NeonAccountShop"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 -- --- PANEL PRINCIPAL ---
 local Panel = Instance.new("Frame")
@@ -70,106 +56,129 @@ Panel.Size = UDim2.new(0, 300, 0, 450)
 Panel.Position = config.PanelPosition
 Panel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 Panel.BorderSizePixel = 0
-Panel.ClipsDescendants = true
-Panel.Parent = PlayersGui
+Panel.Active = true -- Necesario para el arrastre
+Panel.Draggable = false -- Lo haremos manualmente
+Panel.Parent = ScreenGui
 
--- --- TÍTULO ---
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = Panel
+
+local TopBar = Instance.new("Frame")
+TopBar.Name = "TopBar"
+TopBar.Size = UDim2.new(1, 0, 0, 30)
+TopBar.Position = UDim2.new(0, 0, 0, 0)
+TopBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+TopBar.BorderSizePixel = 0
+TopBar.Parent = Panel
+
+local UICorner_TopBar = Instance.new("UICorner")
+UICorner_TopBar.CornerRadius = UDim.new(0, 8)
+UICorner_TopBar.Parent = TopBar
+
 local Title = Instance.new("TextLabel")
 Title.Name = "Title"
 Title.Text = "NeonAccountShop"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.BackgroundTransparency = 1
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Position = UDim2.new(0, 0, 0, 0)
+Title.Size = UDim2.new(1, -50, 1, 0)
+Title.Position = UDim2.new(0, 10, 0, 0)
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 18
-Title.Parent = Panel
+Title.TextSize = 16
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TopBar
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseButton"
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+CloseButton.BackgroundTransparency = 1
+CloseButton.Size = UDim2.new(0, 40, 1, 0)
+CloseButton.Position = UDim2.new(1, -40, 0, 0)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.TextSize = 18
+CloseButton.Parent = TopBar
 
 -- --- PERFIL ---
 local ProfileFrame = Instance.new("Frame")
 ProfileFrame.Name = "ProfileFrame"
-ProfileFrame.Size = UDim2.new(1, 0, 0, 50)
-ProfileFrame.Position = UDim2.new(0, 0, 0, 30)
+ProfileFrame.Size = UDim2.new(1, -20, 0, 50)
+ProfileFrame.Position = UDim2.new(0, 10, 0, 40)
 ProfileFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ProfileFrame.BorderSizePixel = 0
 ProfileFrame.Parent = Panel
+
+local UICorner_Profile = Instance.new("UICorner")
+UICorner_Profile.CornerRadius = UDim.new(0, 6)
+UICorner_Profile.Parent = ProfileFrame
 
 local Avatar = Instance.new("ImageLabel")
 Avatar.Name = "Avatar"
 Avatar.Size = UDim2.new(0, 40, 0, 40)
 Avatar.Position = UDim2.new(0, 5, 0, 5)
-Avatar.Image = config.ProfileAvatar
+Avatar.BackgroundTransparency = 0
+Avatar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+Avatar.Image = "rbxthumb://type=AvatarHeadShot&id="..LocalPlayer.UserId.."&w=150&h=150"
 Avatar.Parent = ProfileFrame
+
+local UICorner_Avatar = Instance.new("UICorner")
+UICorner_Avatar.CornerRadius = UDim.new(0, 20)
+UICorner_Avatar.Parent = Avatar
 
 local Username = Instance.new("TextLabel")
 Username.Name = "Username"
-Username.Text = config.ProfileName
+Username.Text = LocalPlayer.Name
 Username.TextColor3 = Color3.fromRGB(255, 255, 255)
 Username.BackgroundTransparency = 1
 Username.Size = UDim2.new(0, 200, 0, 20)
 Username.Position = UDim2.new(0, 50, 0, 5)
 Username.Font = Enum.Font.GothamBold
 Username.TextSize = 14
+Username.TextXAlignment = Enum.TextXAlignment.Left
 Username.Parent = ProfileFrame
+
+local UserStatus = Instance.new("TextLabel")
+UserStatus.Name = "UserStatus"
+UserStatus.Text = "Status: Online"
+UserStatus.TextColor3 = Color3.fromRGB(150, 150, 150)
+UserStatus.BackgroundTransparency = 1
+UserStatus.Size = UDim2.new(0, 200, 0, 15)
+UserStatus.Position = UDim2.new(0, 50, 0, 25)
+UserStatus.Font = Enum.Font.Gotham
+UserStatus.TextSize = 12
+UserStatus.TextXAlignment = Enum.TextXAlignment.Left
+UserStatus.Parent = ProfileFrame
 
 -- --- PESTAÑAS ---
 local TabBar = Instance.new("Frame")
 TabBar.Name = "TabBar"
-TabBar.Size = UDim2.new(1, 0, 0, 30)
-TabBar.Position = UDim2.new(0, 0, 0, 80)
+TabBar.Size = UDim2.new(1, -20, 0, 30)
+TabBar.Position = UDim2.new(0, 10, 0, 100)
 TabBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+TabBar.BorderSizePixel = 0
 TabBar.Parent = Panel
 
-local Tabs = {"General", "Aimbot", "ESP", "Crosshair", "Settings"}
-local ActiveTab = "General"
+local UICorner_TabBar = Instance.new("UICorner")
+UICorner_TabBar.CornerRadius = UDim.new(0, 6)
+UICorner_TabBar.Parent = TabBar
 
-for _, tabName in ipairs(Tabs) do
-    local TabButton = Instance.new("TextButton")
-    TabButton.Name = tabName.."Tab"
-    TabButton.Text = tabName
-    TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TabButton.BackgroundTransparency = 1
-    TabButton.Size = UDim2.new(0, 60, 1, 0)
-    TabButton.Position = UDim2.new(0, (#Tabs-1)*60, 0, 0)
-    TabButton.Font = Enum.Font.GothamBold
-    TabButton.TextSize = 14
-    TabButton.Parent = TabBar
+local TabLayout = Instance.new("UIListLayout")
+TabLayout.FillDirection = Enum.FillDirection.Horizontal
+TabLayout.Padding = UDim.new(0, 5)
+TabLayout.Parent = TabBar
 
-    TabButton.MouseButton1Click:Connect(function()
-        ActiveTab = tabName
-        for _, btn in ipairs(TabBar:GetChildren()) do
-            if btn:IsA("TextButton") then
-                btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            end
-        end
-        TabButton.TextColor3 = Color3.fromRGB(255, 100, 255)
-        updateTabContent()
-    end)
-end
-
--- --- CONTENIDO DE PESTAÑAS ---
-local TabContent = Instance.new("Frame")
+local TabContent = Instance.new("ScrollingFrame")
 TabContent.Name = "TabContent"
-TabContent.Size = UDim2.new(1, 0, 0, 340)
-TabContent.Position = UDim2.new(0, 0, 0, 110)
+TabContent.Size = UDim2.new(1, -20, 0, 300)
+TabContent.Position = UDim2.new(0, 10, 0, 140)
 TabContent.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+TabContent.BorderSizePixel = 0
+TabContent.ScrollBarThickness = 5
 TabContent.Parent = Panel
 
--- --- FUNCIONES DE ACTUALIZACIÓN ---
-local function updateTabContent()
-    for _, child in ipairs(TabContent:GetChildren()) do
-        child:Destroy()
-    end
+local UICorner_TabContent = Instance.new("UICorner")
+UICorner_TabContent.CornerRadius = UDim.new(0, 6)
+UICorner_TabContent.Parent = TabContent
 
-    if ActiveTab == "General" then
-        local Toggle = Instance.new("TextLabel")
-        Toggle.Text = "Enabled"
-        Toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-        Toggle.BackgroundTransparency = 1
-        Toggle.Size = UDim2.new(0, 60, 0, 20)
-        Toggle.Position = UDim2.new(0, 10, 0, 10)
-        Toggle.Parent = TabContent
-
-        local ToggleCheckbox = Instance.new("TextButton")
-        ToggleCheckbox.Text = config.AimbotEnabled and "ON" or "OFF"
-        ToggleCheckbox.TextColor3 = config.AimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255,
-
+local ContentLayout = Instance.new("UIListLayout")
+ContentLayout.Padding = UDim.new(
