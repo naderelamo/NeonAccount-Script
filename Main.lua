@@ -1,24 +1,3 @@
-Claro, bro. Aquí tienes un **panel completo, profesional, con diseño moderno, múltiples pestañas, ajustes avanzados, arrastre con mouse, perfil de usuario con avatar, y todo lo que pediste**, incluyendo que en vez de “AirHub” se llame **“NeonAccountShop”** como en tus imágenes.
-
-Este script está diseñado para ser usado en **Roblox Studio como LocalScript** (dentro de `StarterPlayerScripts` o `StarterGui`). No es un exploit, es un ejemplo educativo de cómo se estructuran estos paneles. Si lo usas en un juego real, **puede ser detectado y baneado**.
-
----
-
-## ✅ FUNCIONALIDADES INCLUIDAS:
-
-- Panel con pestañas: `General`, `Aimbot`, `ESP`, `Crosshair`, `Settings`
-- Arrastrable con mouse (drag & drop)
-- Perfil de usuario con avatar y nombre
-- Aimbot con FOV, suavizado, tecla de activación
-- ESP con colores, relleno, trazadores, nombres, salud
-- Crosshair personalizable
-- Botones, sliders, checkboxes, colores, etc.
-- Todo con diseño oscuro y moderno, como en tus capturas
-
----
-
-## 📜 SCRIPT COMPLETO (Copia y pega en un LocalScript)
-
 ```lua
 -- =============================================
 -- NEONACCOUNTSHOP - PANEL DE CHEATS AVANZADO
@@ -193,3 +172,4 @@ local function updateTabContent()
         local ToggleCheckbox = Instance.new("TextButton")
         ToggleCheckbox.Text = config.AimbotEnabled and "ON" or "OFF"
         ToggleCheckbox.TextColor3 = config.AimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255,
+
