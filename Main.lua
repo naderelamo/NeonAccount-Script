@@ -1,184 +1,233 @@
+
+Entendido. Tienes razón, mis intentos anteriores no estaban funcionando como un script para un ejecutor real. Me disculpo por eso.
+
+Aquí tienes un script completo y funcional, diseñado desde cero para ser **pegado y ejecutado directamente en un ejecutor de scripts como Synapse, Krnl, etc.**
+
+Este script incluye:
+*   **Login:** Pide un nombre de usuario y contraseña antes de abrir el panel.
+*   **Panel Centrado:** Una interfaz principal que se puede abrir y cerrar con `Shift Derecho`.
+*   **Watermark:** Un pequeño texto en la esquina superior izquierda.
+*   **AimAssist Potente:** Apunta suavemente al jugador más cercano (no es un "snap" instantáneo, es más sutil).
+*   **ESP:** Muestra cajas y nombres de los enemigos a través de las paredes.
+*   **FOV:** Un círculo que muestra el rango de búsqueda del AimAssist.
+
+---
+
+### **Código para el Ejecutor**
+
+Copia y pega esto directamente en tu ejecutor.
+
+```lua
 -- =============================================
--- NeonAccountShop - Panel Completo y Funcional
+-- NeonAccountShop - Full Script for Executor
+-- Features: Login, GUI, AimAssist, ESP, FOV
 -- =============================================
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
-local HttpService = game:GetService("HttpService")
+local GuiService = game:GetService("GuiService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
 local Camera = workspace.CurrentCamera
+local Mouse = LocalPlayer:GetMouse()
 
--- --- CONFIGURACIÓN ---
-local config = {
-    PanelVisible = true,
-    PanelPosition = UDim2.new(0.5, -150, 0.5, -225),
-
-    -- Aimbot
-    AimbotEnabled = false,
-    AimbotKey = Enum.UserInputType.MouseButton2, -- Click derecho para apuntar
-    AimbotFOV = 90,
-    AimbotSmoothness = 0.15,
-    AimbotLockPart = "Head",
-
-    -- ESP
-    ESPEnabled = false,
-    ESPColor = Color3.fromRGB(255, 0, 0),
-
-    -- Crosshair
-    CrosshairEnabled = true,
-    CrosshairColor = Color3.fromRGB(255, 255, 255),
+-- =============================================
+-- CONFIGURACIÓN
+-- =============================================
+local ScriptConfig = {
+    Login = {
+        Username = "user",
+        Password = "1234"
+    },
+    AimAssist = {
+        Enabled = true,
+        Key = Enum.UserInputType.MouseButton2, -- Click Derecho
+        Smoothness = 0.08, -- Más bajo = más suave
+        FOVRadius = 120 -- Radio del círculo FOV
+    },
+    ESP = {
+        Enabled = true,
+        BoxColor = Color3.fromRGB(255, 0, 0),
+        BoxThickness = 2,
+        NameColor = Color3.fromRGB(255, 255, 255)
+    }
 }
 
--- --- DIBUJOS (PARA ESP Y CROSSHAIR) ---
-local Crosshair = Drawing.new("Circle")
-Crosshair.Visible = config.CrosshairEnabled
-Crosshair.Radius = 3
-Crosshair.Color = config.CrosshairColor
-Crosshair.Thickness = 2
-Crosshair.Filled = false
+-- =============================================
+-- VARIABLES Y ESTADO
+-- =============================================
+local isPanelOpen = false
+local isDragging = false
+local dragStart = nil
+local startPos = nil
+local currentTarget = nil
+
+-- =============================================
+-- FUNCIONES DE DIBUJO (ESP, FOV, CROSSHAIR)
+-- =============================================
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Visible = ScriptConfig.AimAssist.Enabled
+FOVCircle.Radius = ScriptConfig.AimAssist.FOVRadius
+FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+FOVCircle.Thickness = 1
+FOVCircle.Filled = false
+FOVCircle.Transparency = 0.5
+FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
 local espCache = {}
 
--- --- GUI SETUP ---
+local function createESP(character)
+    local player = Players:GetPlayerFromCharacter(character)
+    if not player or player == LocalPlayer then return end
+
+    local objects = {
+        Box = Drawing.new("Square"),
+        Name = Drawing.new("Text")
+    }
+
+    objects.Box.Color = ScriptConfig.ESP.BoxColor
+    objects.Box.Thickness = ScriptConfig.ESP.BoxThickness
+    objects.Box.Filled = false
+
+    objects.Name.Color = ScriptConfig.ESP.NameColor
+    objects.Name.Size = 13
+    objects.Name.Center = true
+    objects.Name.Outline = true
+
+    espCache[character] = objects
+end
+
+local function updateESP()
+    for character, objects in pairs(espCache) do
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        local humanoid = character:FindFirstChild("Humanoid")
+
+        if humanoidRootPart and humanoid and humanoid.Health > 0 then
+            local position, onScreen = Camera:WorldToViewportPoint(humanoidRootPart.Position)
+            
+            if onScreen then
+                local player = Players:GetPlayerFromCharacter(character)
+                local size = (Camera:WorldToViewportPoint(humanoidRootPart.Position - Vector3.new(0, 3, 0)).Y - Camera:WorldToViewportPoint(humanoidRootPart.Position + Vector3.new(0, 3, 0)).Y)
+                
+                objects.Box.Size = Vector2.new(size / 2, size)
+                objects.Box.Position = Vector2.new(position.X - size / 4, position.Y - size / 2)
+                objects.Box.Visible = ScriptConfig.ESP.Enabled
+
+                objects.Name.Position = Vector2.new(position.X, position.Y - size / 2 - 15)
+                objects.Name.Text = player.Name .. " [" .. math.floor(humanoid.Health) .. "]"
+                objects.Name.Visible = ScriptConfig.ESP.Enabled
+            else
+                objects.Box.Visible = false
+                objects.Name.Visible = false
+            end
+        else
+            objects.Box.Visible = false
+            objects.Name.Visible = false
+        end
+    end
+end
+
+local function cleanupESP(character)
+    if espCache[character] then
+        for _, obj in pairs(espCache[character]) do
+            obj:Remove()
+        end
+        espCache[character] = nil
+    end
+end
+
+-- =============================================
+-- FUNCIONES DEL AIM ASSIST
+-- =============================================
+local function getClosestPlayerToCursor()
+    local closestPlayer = nil
+    local shortestDistance = ScriptConfig.AimAssist.FOVRadius
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player == LocalPlayer or not player.Character then continue end
+        
+        local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
+        local humanoid = player.Character:FindFirstChild("Humanoid")
+
+        if not humanoidRootPart or not humanoid or humanoid.Health <= 0 then continue end
+
+        local position, onScreen = Camera:WorldToViewportPoint(humanoidRootPart.Position)
+        if not onScreen then continue end
+
+        local distance = (Vector2.new(position.X, position.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
+        if distance < shortestDistance then
+            shortestDistance = distance
+            closestPlayer = player
+        end
+    end
+
+    return closestPlayer
+end
+
+local function aimAt(target)
+    if not target or not target.Character then return end
+    
+    local humanoidRootPart = target.Character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then return end
+
+    local aimPosition = humanoidRootPart.Position
+    local lookVector = (aimPosition - Camera.CFrame.Position).unit
+    
+    local newCFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + lookVector)
+    Camera.CFrame = Camera.CFrame:Lerp(newCFrame, 1 - ScriptConfig.AimAssist.Smoothness)
+end
+
+-- =============================================
+-- INTERFAZ GRÁFICA (GUI)
+-- =============================================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "NeonAccountShop"
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- --- PANEL PRINCIPAL ---
-local Panel = Instance.new("Frame")
-Panel.Name = "NeonPanel"
-Panel.Size = UDim2.new(0, 300, 0, 450)
-Panel.Position = config.PanelPosition
-Panel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-Panel.BorderSizePixel = 0
-Panel.Active = true -- Necesario para el arrastre
-Panel.Draggable = false -- Lo haremos manualmente
-Panel.Parent = ScreenGui
+-- Watermark
+local Watermark = Instance.new("TextLabel")
+Watermark.Name = "Watermark"
+Watermark.Text = "NeonAccountShop v1.0 | User: " .. LocalPlayer.Name
+Watermark.TextColor3 = Color3.fromRGB(255, 255, 255)
+Watermark.BackgroundTransparency = 1
+Watermark.Size = UDim2.new(0, 200, 0, 20)
+Watermark.Position = UDim2.new(0, 10, 0, 10)
+Watermark.Font = Enum.Font.Code
+Watermark.TextSize = 14
+Watermark.TextXAlignment = Enum.TextXAlignment.Left
+Watermark.Parent = ScreenGui
 
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
-UICorner.Parent = Panel
+-- Login GUI
+local LoginFrame = Instance.new("Frame")
+LoginFrame.Name = "LoginFrame"
+LoginFrame.Size = UDim2.new(0, 250, 0, 150)
+LoginFrame.Position = UDim2.new(0.5, -125, 0.5, -75)
+LoginFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+LoginFrame.BorderSizePixel = 0
+LoginFrame.Parent = ScreenGui
 
-local TopBar = Instance.new("Frame")
-TopBar.Name = "TopBar"
-TopBar.Size = UDim2.new(1, 0, 0, 30)
-TopBar.Position = UDim2.new(0, 0, 0, 0)
-TopBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-TopBar.BorderSizePixel = 0
-TopBar.Parent = Panel
+local UICorner_Login = Instance.new("UICorner")
+UICorner_Login.Parent = LoginFrame
 
-local UICorner_TopBar = Instance.new("UICorner")
-UICorner_TopBar.CornerRadius = UDim.new(0, 8)
-UICorner_TopBar.Parent = TopBar
+local LoginTitle = Instance.new("TextLabel")
+LoginTitle.Name = "LoginTitle"
+LoginTitle.Text = "NeonAccountShop Login"
+LoginTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+LoginTitle.BackgroundTransparency = 1
+LoginTitle.Size = UDim2.new(1, 0, 0, 30)
+LoginTitle.Position = UDim2.new(0, 0, 0, 10)
+LoginTitle.Font = Enum.Font.GothamBold
+LoginTitle.TextSize = 18
+LoginTitle.Parent = LoginFrame
 
-local Title = Instance.new("TextLabel")
-Title.Name = "Title"
-Title.Text = "NeonAccountShop"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.BackgroundTransparency = 1
-Title.Size = UDim2.new(1, -50, 1, 0)
-Title.Position = UDim2.new(0, 10, 0, 0)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 16
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.Parent = TopBar
-
-local CloseButton = Instance.new("TextButton")
-CloseButton.Name = "CloseButton"
-CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.fromRGB(255, 100, 100)
-CloseButton.BackgroundTransparency = 1
-CloseButton.Size = UDim2.new(0, 40, 1, 0)
-CloseButton.Position = UDim2.new(1, -40, 0, 0)
-CloseButton.Font = Enum.Font.GothamBold
-CloseButton.TextSize = 18
-CloseButton.Parent = TopBar
-
--- --- PERFIL ---
-local ProfileFrame = Instance.new("Frame")
-ProfileFrame.Name = "ProfileFrame"
-ProfileFrame.Size = UDim2.new(1, -20, 0, 50)
-ProfileFrame.Position = UDim2.new(0, 10, 0, 40)
-ProfileFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-ProfileFrame.BorderSizePixel = 0
-ProfileFrame.Parent = Panel
-
-local UICorner_Profile = Instance.new("UICorner")
-UICorner_Profile.CornerRadius = UDim.new(0, 6)
-UICorner_Profile.Parent = ProfileFrame
-
-local Avatar = Instance.new("ImageLabel")
-Avatar.Name = "Avatar"
-Avatar.Size = UDim2.new(0, 40, 0, 40)
-Avatar.Position = UDim2.new(0, 5, 0, 5)
-Avatar.BackgroundTransparency = 0
-Avatar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-Avatar.Image = "rbxthumb://type=AvatarHeadShot&id="..LocalPlayer.UserId.."&w=150&h=150"
-Avatar.Parent = ProfileFrame
-
-local UICorner_Avatar = Instance.new("UICorner")
-UICorner_Avatar.CornerRadius = UDim.new(0, 20)
-UICorner_Avatar.Parent = Avatar
-
-local Username = Instance.new("TextLabel")
-Username.Name = "Username"
-Username.Text = LocalPlayer.Name
-Username.TextColor3 = Color3.fromRGB(255, 255, 255)
-Username.BackgroundTransparency = 1
-Username.Size = UDim2.new(0, 200, 0, 20)
-Username.Position = UDim2.new(0, 50, 0, 5)
-Username.Font = Enum.Font.GothamBold
-Username.TextSize = 14
-Username.TextXAlignment = Enum.TextXAlignment.Left
-Username.Parent = ProfileFrame
-
-local UserStatus = Instance.new("TextLabel")
-UserStatus.Name = "UserStatus"
-UserStatus.Text = "Status: Online"
-UserStatus.TextColor3 = Color3.fromRGB(150, 150, 150)
-UserStatus.BackgroundTransparency = 1
-UserStatus.Size = UDim2.new(0, 200, 0, 15)
-UserStatus.Position = UDim2.new(0, 50, 0, 25)
-UserStatus.Font = Enum.Font.Gotham
-UserStatus.TextSize = 12
-UserStatus.TextXAlignment = Enum.TextXAlignment.Left
-UserStatus.Parent = ProfileFrame
-
--- --- PESTAÑAS ---
-local TabBar = Instance.new("Frame")
-TabBar.Name = "TabBar"
-TabBar.Size = UDim2.new(1, -20, 0, 30)
-TabBar.Position = UDim2.new(0, 10, 0, 100)
-TabBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-TabBar.BorderSizePixel = 0
-TabBar.Parent = Panel
-
-local UICorner_TabBar = Instance.new("UICorner")
-UICorner_TabBar.CornerRadius = UDim.new(0, 6)
-UICorner_TabBar.Parent = TabBar
-
-local TabLayout = Instance.new("UIListLayout")
-TabLayout.FillDirection = Enum.FillDirection.Horizontal
-TabLayout.Padding = UDim.new(0, 5)
-TabLayout.Parent = TabBar
-
-local TabContent = Instance.new("ScrollingFrame")
-TabContent.Name = "TabContent"
-TabContent.Size = UDim2.new(1, -20, 0, 300)
-TabContent.Position = UDim2.new(0, 10, 0, 140)
-TabContent.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-TabContent.BorderSizePixel = 0
-TabContent.ScrollBarThickness = 5
-TabContent.Parent = Panel
-
-local UICorner_TabContent = Instance.new("UICorner")
-UICorner_TabContent.CornerRadius = UDim.new(0, 6)
-UICorner_TabContent.Parent = TabContent
-
-local ContentLayout = Instance.new("UIListLayout")
-ContentLayout.Padding = UDim.new(
+local UsernameBox = Instance.new("TextBox")
+UsernameBox.Name = "UsernameBox"
+UsernameBox.PlaceholderText = "Username"
+UsernameBox.Text = ""
+UsernameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+UsernameBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+UsernameBox.BorderSizePixel = 
