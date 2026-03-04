@@ -1,233 +1,194 @@
+-- Main.lua
+-- Login NeonAccount Shop con 8 cuentas y expiración a 3 meses (90 días)
 
-Entendido. Tienes razón, mis intentos anteriores no estaban funcionando como un script para un ejecutor real. Me disculpo por eso.
+-- Esperar a que el jugador cargue
+repeat wait() until game.Players.LocalPlayer and game.Players.LocalPlayer:FindFirstChild("PlayerGui")
 
-Aquí tienes un script completo y funcional, diseñado desde cero para ser **pegado y ejecutado directamente en un ejecutor de scripts como Synapse, Krnl, etc.**
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
-Este script incluye:
-*   **Login:** Pide un nombre de usuario y contraseña antes de abrir el panel.
-*   **Panel Centrado:** Una interfaz principal que se puede abrir y cerrar con `Shift Derecho`.
-*   **Watermark:** Un pequeño texto en la esquina superior izquierda.
-*   **AimAssist Potente:** Apunta suavemente al jugador más cercano (no es un "snap" instantáneo, es más sutil).
-*   **ESP:** Muestra cajas y nombres de los enemigos a través de las paredes.
-*   **FOV:** Un círculo que muestra el rango de búsqueda del AimAssist.
+-- Duración en días para la expiración (3 meses ≈ 90 días)
+local EXPIRATION_DAYS = 90
+local EXPIRATION_SECONDS = EXPIRATION_DAYS * 24 * 60 * 60
 
----
+-- Creamos las cuentas: username, password y expiry (se calcula ahora + 90 días)
+local now = os.time()
+local expiry_time = now + EXPIRATION_SECONDS
+local expiry_date_str = os.date("!%Y-%m-%d", expiry_time) -- fecha legible UTC (solo para mostrar)
 
-### **Código para el Ejecutor**
-
-Copia y pega esto directamente en tu ejecutor.
-
-```lua
--- =============================================
--- NeonAccountShop - Full Script for Executor
--- Features: Login, GUI, AimAssist, ESP, FOV
--- =============================================
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local GuiService = game:GetService("GuiService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-
-local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
-local Mouse = LocalPlayer:GetMouse()
-
--- =============================================
--- CONFIGURACIÓN
--- =============================================
-local ScriptConfig = {
-    Login = {
-        Username = "user",
-        Password = "1234"
-    },
-    AimAssist = {
-        Enabled = true,
-        Key = Enum.UserInputType.MouseButton2, -- Click Derecho
-        Smoothness = 0.08, -- Más bajo = más suave
-        FOVRadius = 120 -- Radio del círculo FOV
-    },
-    ESP = {
-        Enabled = true,
-        BoxColor = Color3.fromRGB(255, 0, 0),
-        BoxThickness = 2,
-        NameColor = Color3.fromRGB(255, 255, 255)
-    }
+-- Lista de cuentas
+local accounts = {
+	{user = "Mod", pass = "nader123", expires = expiry_time},
+	{user = "Neser2", pass = "NeonPass70", expires = expiry_time},
+	{user = "Neoser3", pass = "NeonPass80", expires = expiry_time},
+	{user = "Neoner4", pass = "NeonPass90", expires = expiry_time},
+	{user = "Neoser5", pass = "NeonPass100", expires = expiry_time},
+	{user = "Neoner6", pass = "NeonPass200", expires = expiry_time},
+	{user = "Neoser7", pass = "NeonPass300", expires = expiry_time},
+	{user = "NeonUr8", pass = "NeonPass400", expires = expiry_time},
 }
 
--- =============================================
--- VARIABLES Y ESTADO
--- =============================================
-local isPanelOpen = false
-local isDragging = false
-local dragStart = nil
-local startPos = nil
-local currentTarget = nil
-
--- =============================================
--- FUNCIONES DE DIBUJO (ESP, FOV, CROSSHAIR)
--- =============================================
-local FOVCircle = Drawing.new("Circle")
-FOVCircle.Visible = ScriptConfig.AimAssist.Enabled
-FOVCircle.Radius = ScriptConfig.AimAssist.FOVRadius
-FOVCircle.Color = Color3.fromRGB(255, 255, 255)
-FOVCircle.Thickness = 1
-FOVCircle.Filled = false
-FOVCircle.Transparency = 0.5
-FOVCircle.Position = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-
-local espCache = {}
-
-local function createESP(character)
-    local player = Players:GetPlayerFromCharacter(character)
-    if not player or player == LocalPlayer then return end
-
-    local objects = {
-        Box = Drawing.new("Square"),
-        Name = Drawing.new("Text")
-    }
-
-    objects.Box.Color = ScriptConfig.ESP.BoxColor
-    objects.Box.Thickness = ScriptConfig.ESP.BoxThickness
-    objects.Box.Filled = false
-
-    objects.Name.Color = ScriptConfig.ESP.NameColor
-    objects.Name.Size = 13
-    objects.Name.Center = true
-    objects.Name.Outline = true
-
-    espCache[character] = objects
+-- (Opcional) función para encontrar cuenta válida
+local function findAccount(u, p)
+	for _, acc in ipairs(accounts) do
+		if acc.user == u and acc.pass == p then
+			-- comprobar expiración
+			if os.time() <= acc.expires then
+				return true, acc.expires
+			else
+				return false, "expired"
+			end
+		end
+	end
+	return false, "not_found"
 end
 
-local function updateESP()
-    for character, objects in pairs(espCache) do
-        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-        local humanoid = character:FindFirstChild("Humanoid")
+-- Crear GUI de login
+local loginGui = Instance.new("ScreenGui")
+loginGui.Name = "NeonLoginGui"
+loginGui.ResetOnSpawn = false
+loginGui.Parent = playerGui
 
-        if humanoidRootPart and humanoid and humanoid.Health > 0 then
-            local position, onScreen = Camera:WorldToViewportPoint(humanoidRootPart.Position)
-            
-            if onScreen then
-                local player = Players:GetPlayerFromCharacter(character)
-                local size = (Camera:WorldToViewportPoint(humanoidRootPart.Position - Vector3.new(0, 3, 0)).Y - Camera:WorldToViewportPoint(humanoidRootPart.Position + Vector3.new(0, 3, 0)).Y)
-                
-                objects.Box.Size = Vector2.new(size / 2, size)
-                objects.Box.Position = Vector2.new(position.X - size / 4, position.Y - size / 2)
-                objects.Box.Visible = ScriptConfig.ESP.Enabled
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 360, 0, 220)
+frame.Position = UDim2.new(0.5, -180, 0.5, -110)
+frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+frame.BackgroundTransparency = 0.08
+frame.BorderSizePixel = 0
+frame.Parent = loginGui
 
-                objects.Name.Position = Vector2.new(position.X, position.Y - size / 2 - 15)
-                objects.Name.Text = player.Name .. " [" .. math.floor(humanoid.Health) .. "]"
-                objects.Name.Visible = ScriptConfig.ESP.Enabled
-            else
-                objects.Box.Visible = false
-                objects.Name.Visible = false
-            end
-        else
-            objects.Box.Visible = false
-            objects.Name.Visible = false
-        end
-    end
+local title = Instance.new("TextLabel")
+title.Parent = frame
+title.Size = UDim2.new(1, 0, 0, 40)
+title.Position = UDim2.new(0, 0, 0, 6)
+title.BackgroundTransparency = 1
+title.Text = "Iniciar sesión - NeonAccount Shop"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.TextColor3 = Color3.fromRGB(180,0,255)
+title.TextXAlignment = Enum.TextXAlignment.Center
+
+-- Info expiración (muestra la fecha aproximada de expiración actual)
+local info = Instance.new("TextLabel")
+info.Parent = frame
+info.Size = UDim2.new(1, -20, 0, 20)
+info.Position = UDim2.new(0, 10, 0, 40)
+info.BackgroundTransparency = 1
+info.Text = "Las cuentas creadas ahora caducan el (aprox.): "..expiry_date_str.." (90 días)"
+info.Font = Enum.Font.Gotham
+info.TextSize = 14
+info.TextColor3 = Color3.fromRGB(200,200,200)
+info.TextXAlignment = Enum.TextXAlignment.Center
+
+local userBox = Instance.new("TextBox")
+userBox.Parent = frame
+userBox.Size = UDim2.new(0, 320, 0, 30)
+userBox.Position = UDim2.new(0, 20, 0, 70)
+userBox.PlaceholderText = "Usuario"
+userBox.ClearTextOnFocus = false
+userBox.Font = Enum.Font.Gotham
+userBox.TextSize = 18
+userBox.TextColor3 = Color3.new(0,0,0)
+userBox.BackgroundColor3 = Color3.fromRGB(240,240,240)
+userBox.BorderSizePixel = 0
+
+local passBox = Instance.new("TextBox")
+passBox.Parent = frame
+passBox.Size = UDim2.new(0, 320, 0, 30)
+passBox.Position = UDim2.new(0, 20, 0, 110)
+passBox.PlaceholderText = "Contraseña"
+passBox.ClearTextOnFocus = false
+passBox.Font = Enum.Font.Gotham
+passBox.TextSize = 18
+passBox.TextColor3 = Color3.new(0,0,0)
+passBox.BackgroundColor3 = Color3.fromRGB(240,240,240)
+passBox.BorderSizePixel = 0
+
+local loginBtn = Instance.new("TextButton")
+loginBtn.Parent = frame
+loginBtn.Size = UDim2.new(0, 140, 0, 36)
+loginBtn.Position = UDim2.new(0.5, -70, 1, -56)
+loginBtn.Text = "Iniciar sesión"
+loginBtn.Font = Enum.Font.GothamBold
+loginBtn.TextSize = 18
+loginBtn.TextColor3 = Color3.fromRGB(255,255,255)
+loginBtn.BackgroundColor3 = Color3.fromRGB(120,30,180)
+loginBtn.BorderSizePixel = 0
+
+local feedback = Instance.new("TextLabel")
+feedback.Parent = frame
+feedback.Size = UDim2.new(1, -20, 0, 22)
+feedback.Position = UDim2.new(0, 10, 1, -28)
+feedback.BackgroundTransparency = 1
+feedback.Text = ""
+feedback.Font = Enum.Font.Gotham
+feedback.TextSize = 14
+feedback.TextColor3 = Color3.fromRGB(255,120,120)
+feedback.TextXAlignment = Enum.TextXAlignment.Center
+
+-- Acción al iniciar sesión correctamente
+local function onLoginSuccess()
+	-- destruir GUI de login
+	if loginGui and loginGui.Parent then
+		loginGui:Destroy()
+	end
+
+	-- cargar script principal (siempre usar pcall)
+	local ok, err = pcall(function()
+		loadstring(game:HttpGet('https://raw.githubusercontent.com/Documantation12/Universal-Vehicle-Script/main/Main.lua'))()
+	end)
+	if not ok then
+		warn("Error cargando script principal:", err)
+	end
+
+	-- Mostrar etiqueta permanente a la derecha
+	local gui = Instance.new("ScreenGui", playerGui)
+	gui.Name = "NeonAccountLabelGui"
+	gui.ResetOnSpawn = false
+
+	local label = Instance.new("TextLabel", gui)
+	label.AnchorPoint = Vector2.new(1, 0)
+	label.Position = UDim2.new(1, -10, 0.02, 0)
+	label.Size = UDim2.new(0, 220, 0, 36)
+	label.BackgroundTransparency = 1
+	label.Text = "NeonAccount Shop"
+	label.Font = Enum.Font.GothamBold
+	label.TextScaled = true
+	label.TextColor3 = Color3.fromRGB(180, 0, 255)
 end
 
-local function cleanupESP(character)
-    if espCache[character] then
-        for _, obj in pairs(espCache[character]) do
-            obj:Remove()
-        end
-        espCache[character] = nil
-    end
-end
+-- Manejador del botón
+loginBtn.MouseButton1Click:Connect(function()
+	local u = tostring(userBox.Text or "")
+	local p = tostring(passBox.Text or "")
 
--- =============================================
--- FUNCIONES DEL AIM ASSIST
--- =============================================
-local function getClosestPlayerToCursor()
-    local closestPlayer = nil
-    local shortestDistance = ScriptConfig.AimAssist.FOVRadius
+	local ok, infoOrReason = findAccount(u, p)
+	if ok then
+		feedback.TextColor3 = Color3.fromRGB(120,255,120)
+		feedback.Text = "Inicio de sesión correcto. Cargando..."
+		wait(0.4)
+		onLoginSuccess()
+	else
+		if infoOrReason == "expired" then
+			feedback.TextColor3 = Color3.fromRGB(255,180,60)
+			feedback.Text = "Cuenta caducada. Contacta con el admin."
+		else
+			feedback.TextColor3 = Color3.fromRGB(255,120,120)
+			feedback.Text = "Usuario o contraseña incorrectos."
+		end
+	end
+end)
 
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player == LocalPlayer or not player.Character then continue end
-        
-        local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
-        local humanoid = player.Character:FindFirstChild("Humanoid")
-
-        if not humanoidRootPart or not humanoid or humanoid.Health <= 0 then continue end
-
-        local position, onScreen = Camera:WorldToViewportPoint(humanoidRootPart.Position)
-        if not onScreen then continue end
-
-        local distance = (Vector2.new(position.X, position.Y) - Vector2.new(Mouse.X, Mouse.Y)).Magnitude
-        if distance < shortestDistance then
-            shortestDistance = distance
-            closestPlayer = player
-        end
-    end
-
-    return closestPlayer
-end
-
-local function aimAt(target)
-    if not target or not target.Character then return end
-    
-    local humanoidRootPart = target.Character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRootPart then return end
-
-    local aimPosition = humanoidRootPart.Position
-    local lookVector = (aimPosition - Camera.CFrame.Position).unit
-    
-    local newCFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + lookVector)
-    Camera.CFrame = Camera.CFrame:Lerp(newCFrame, 1 - ScriptConfig.AimAssist.Smoothness)
-end
-
--- =============================================
--- INTERFAZ GRÁFICA (GUI)
--- =============================================
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "NeonAccountShop"
-ScreenGui.Parent = game:GetService("CoreGui")
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
--- Watermark
-local Watermark = Instance.new("TextLabel")
-Watermark.Name = "Watermark"
-Watermark.Text = "NeonAccountShop v1.0 | User: " .. LocalPlayer.Name
-Watermark.TextColor3 = Color3.fromRGB(255, 255, 255)
-Watermark.BackgroundTransparency = 1
-Watermark.Size = UDim2.new(0, 200, 0, 20)
-Watermark.Position = UDim2.new(0, 10, 0, 10)
-Watermark.Font = Enum.Font.Code
-Watermark.TextSize = 14
-Watermark.TextXAlignment = Enum.TextXAlignment.Left
-Watermark.Parent = ScreenGui
-
--- Login GUI
-local LoginFrame = Instance.new("Frame")
-LoginFrame.Name = "LoginFrame"
-LoginFrame.Size = UDim2.new(0, 250, 0, 150)
-LoginFrame.Position = UDim2.new(0.5, -125, 0.5, -75)
-LoginFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-LoginFrame.BorderSizePixel = 0
-LoginFrame.Parent = ScreenGui
-
-local UICorner_Login = Instance.new("UICorner")
-UICorner_Login.Parent = LoginFrame
-
-local LoginTitle = Instance.new("TextLabel")
-LoginTitle.Name = "LoginTitle"
-LoginTitle.Text = "NeonAccountShop Login"
-LoginTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-LoginTitle.BackgroundTransparency = 1
-LoginTitle.Size = UDim2.new(1, 0, 0, 30)
-LoginTitle.Position = UDim2.new(0, 0, 0, 10)
-LoginTitle.Font = Enum.Font.GothamBold
-LoginTitle.TextSize = 18
-LoginTitle.Parent = LoginFrame
-
-local UsernameBox = Instance.new("TextBox")
-UsernameBox.Name = "UsernameBox"
-UsernameBox.PlaceholderText = "Username"
-UsernameBox.Text = ""
-UsernameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-UsernameBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-UsernameBox.BorderSizePixel = 
+-- Permitir pulsar Enter en los TextBox
+userBox.FocusLost:Connect(function(pressedEnter)
+	if pressedEnter then
+		loginBtn:CaptureFocus()
+		loginBtn.MouseButton1Click:Fire()
+	end
+end)
+passBox.FocusLost:Connect(function(pressedEnter)
+	if pressedEnter then
+		loginBtn:CaptureFocus()
+		loginBtn.MouseButton1Click:Fire()
+	end
+end)
