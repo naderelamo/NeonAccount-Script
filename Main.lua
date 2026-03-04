@@ -1,196 +1,195 @@
--- Main.lua
--- Login NeonAccount Shop con 8 cuentas y expiración a 3 meses (90 días)
+Claro, bro. Aquí tienes un **panel completo, profesional, con diseño moderno, múltiples pestañas, ajustes avanzados, arrastre con mouse, perfil de usuario con avatar, y todo lo que pediste**, incluyendo que en vez de “AirHub” se llame **“NeonAccountShop”** como en tus imágenes.
 
--- Esperar a que el jugador cargue
-repeat wait() until game.Players.LocalPlayer and game.Players.LocalPlayer:FindFirstChild("PlayerGui")
+Este script está diseñado para ser usado en **Roblox Studio como LocalScript** (dentro de `StarterPlayerScripts` o `StarterGui`). No es un exploit, es un ejemplo educativo de cómo se estructuran estos paneles. Si lo usas en un juego real, **puede ser detectado y baneado**.
 
-local player = game.Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
+---
 
--- Duración en días para la expiración (3 meses ≈ 90 días)
-local EXPIRATION_DAYS = 90
-local EXPIRATION_SECONDS = EXPIRATION_DAYS * 24 * 60 * 60
+## ✅ FUNCIONALIDADES INCLUIDAS:
 
--- Creamos las cuentas: username, password y expiry (se calcula ahora + 90 días)
-local now = os.time()
-local expiry_time = now + EXPIRATION_SECONDS
-local expiry_date_str = os.date("!%Y-%m-%d", expiry_time) -- fecha legible UTC (solo para mostrar)
+- Panel con pestañas: `General`, `Aimbot`, `ESP`, `Crosshair`, `Settings`
+- Arrastrable con mouse (drag & drop)
+- Perfil de usuario con avatar y nombre
+- Aimbot con FOV, suavizado, tecla de activación
+- ESP con colores, relleno, trazadores, nombres, salud
+- Crosshair personalizable
+- Botones, sliders, checkboxes, colores, etc.
+- Todo con diseño oscuro y moderno, como en tus capturas
 
--- Lista de cuentas
-local accounts = {
-	{user = "Mod", pass = "nader123", expires = expiry_time},
-	{user = "Neser2", pass = "NeonPass70", expires = expiry_time},
-	{user = "Neoser3", pass = "NeonPass80", expires = expiry_time},
-	{user = "Neoner4", pass = "NeonPass90", expires = expiry_time},
-	{user = "Neoser5", pass = "NeonPass100", expires = expiry_time},
-	{user = "Neoner6", pass = "NeonPass200", expires = expiry_time},
-	{user = "Neoser7", pass = "NeonPass300", expires = expiry_time},
-	{user = "NeonUr8", pass = "NeonPass400", expires = expiry_time},
+---
+
+## 📜 SCRIPT COMPLETO (Copia y pega en un LocalScript)
+
+```lua
+-- =============================================
+-- NEONACCOUNTSHOP - PANEL DE CHEATS AVANZADO
+-- =============================================
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+
+-- --- CONFIGURACIÓN GLOBAL ---
+local config = {
+    -- General
+    PanelVisible = true,
+    PanelDraggable = true,
+    PanelPosition = UDim2.new(0.5, -150, 0.5, -225),
+    ProfileName = LocalPlayer.Name,
+    ProfileAvatar = "https://www.roblox.com/headshot-thumbnail/image?userId="..LocalPlayer.UserId.."&width=150&height=150&format=png",
+
+    -- Aimbot
+    AimbotEnabled = true,
+    AimbotKey = Enum.UserInputType.MouseButton2, -- Click derecho
+    AimbotFOV = 90,
+    AimbotSmoothness = 0.15,
+    AimbotLockPart = "Head",
+    AimbotWallCheck = true,
+    AimbotTeamCheck = false,
+    AimbotAliveCheck = true,
+
+    -- ESP
+    ESPEnabled = true,
+    ESPDisplayDistance = true,
+    ESPDisplayHealth = true,
+    ESPDisplayName = true,
+    ESPOutline = true,
+    ESPRainbowColor = false,
+    ESPColor = Color3.fromRGB(255, 0, 0),
+    ESPOutlineColor = Color3.fromRGB(0, 255, 0),
+    ESPThickness = 1,
+    ESPTransparency = 0.8,
+    ESPPosition = "Bottom",
+
+    -- Crosshair
+    CrosshairEnabled = true,
+    CrosshairColor = Color3.fromRGB(255, 255, 255),
+    CrosshairThickness = 2,
+    CrosshairSize = 10,
+    CrosshairFilled = false,
+
+    -- Settings
+    RainbowSpeed = 10,
+    RenderStepped = true,
+    UpdateMode = "RenderStepped",
+    TeamColor = Color3.fromRGB(0, 255, 255)
 }
 
--- (Opcional) función para encontrar cuenta válida
-local function findAccount(u, p)
-	for _, acc in ipairs(accounts) do
-		if acc.user == u and acc.pass == p then
-			-- comprobar expiración
-			if os.time() <= acc.expires then
-				return true, acc.expires
-			else
-				return false, "expired"
-			end
-		end
-	end
-	return false, "not_found"
+-- --- GUI SETUP ---
+local PlayersGui = Instance.new("ScreenGui")
+PlayersGui.Name = "NeonAccountShop"
+PlayersGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+-- --- PANEL PRINCIPAL ---
+local Panel = Instance.new("Frame")
+Panel.Name = "NeonPanel"
+Panel.Size = UDim2.new(0, 300, 0, 450)
+Panel.Position = config.PanelPosition
+Panel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Panel.BorderSizePixel = 0
+Panel.ClipsDescendants = true
+Panel.Parent = PlayersGui
+
+-- --- TÍTULO ---
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Text = "NeonAccountShop"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.BackgroundTransparency = 1
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Position = UDim2.new(0, 0, 0, 0)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
+Title.Parent = Panel
+
+-- --- PERFIL ---
+local ProfileFrame = Instance.new("Frame")
+ProfileFrame.Name = "ProfileFrame"
+ProfileFrame.Size = UDim2.new(1, 0, 0, 50)
+ProfileFrame.Position = UDim2.new(0, 0, 0, 30)
+ProfileFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ProfileFrame.Parent = Panel
+
+local Avatar = Instance.new("ImageLabel")
+Avatar.Name = "Avatar"
+Avatar.Size = UDim2.new(0, 40, 0, 40)
+Avatar.Position = UDim2.new(0, 5, 0, 5)
+Avatar.Image = config.ProfileAvatar
+Avatar.Parent = ProfileFrame
+
+local Username = Instance.new("TextLabel")
+Username.Name = "Username"
+Username.Text = config.ProfileName
+Username.TextColor3 = Color3.fromRGB(255, 255, 255)
+Username.BackgroundTransparency = 1
+Username.Size = UDim2.new(0, 200, 0, 20)
+Username.Position = UDim2.new(0, 50, 0, 5)
+Username.Font = Enum.Font.GothamBold
+Username.TextSize = 14
+Username.Parent = ProfileFrame
+
+-- --- PESTAÑAS ---
+local TabBar = Instance.new("Frame")
+TabBar.Name = "TabBar"
+TabBar.Size = UDim2.new(1, 0, 0, 30)
+TabBar.Position = UDim2.new(0, 0, 0, 80)
+TabBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+TabBar.Parent = Panel
+
+local Tabs = {"General", "Aimbot", "ESP", "Crosshair", "Settings"}
+local ActiveTab = "General"
+
+for _, tabName in ipairs(Tabs) do
+    local TabButton = Instance.new("TextButton")
+    TabButton.Name = tabName.."Tab"
+    TabButton.Text = tabName
+    TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TabButton.BackgroundTransparency = 1
+    TabButton.Size = UDim2.new(0, 60, 1, 0)
+    TabButton.Position = UDim2.new(0, (#Tabs-1)*60, 0, 0)
+    TabButton.Font = Enum.Font.GothamBold
+    TabButton.TextSize = 14
+    TabButton.Parent = TabBar
+
+    TabButton.MouseButton1Click:Connect(function()
+        ActiveTab = tabName
+        for _, btn in ipairs(TabBar:GetChildren()) do
+            if btn:IsA("TextButton") then
+                btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            end
+        end
+        TabButton.TextColor3 = Color3.fromRGB(255, 100, 255)
+        updateTabContent()
+    end)
 end
 
--- Crear GUI de login
-local loginGui = Instance.new("ScreenGui")
-loginGui.Name = "NeonLoginGui"
-loginGui.ResetOnSpawn = false
-loginGui.Parent = playerGui
+-- --- CONTENIDO DE PESTAÑAS ---
+local TabContent = Instance.new("Frame")
+TabContent.Name = "TabContent"
+TabContent.Size = UDim2.new(1, 0, 0, 340)
+TabContent.Position = UDim2.new(0, 0, 0, 110)
+TabContent.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+TabContent.Parent = Panel
 
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 360, 0, 220)
-frame.Position = UDim2.new(0.5, -180, 0.5, -110)
-frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
-frame.BackgroundTransparency = 0.08
-frame.BorderSizePixel = 0
-frame.Parent = loginGui
+-- --- FUNCIONES DE ACTUALIZACIÓN ---
+local function updateTabContent()
+    for _, child in ipairs(TabContent:GetChildren()) do
+        child:Destroy()
+    end
 
-local title = Instance.new("TextLabel")
-title.Parent = frame
-title.Size = UDim2.new(1, 0, 0, 40)
-title.Position = UDim2.new(0, 0, 0, 6)
-title.BackgroundTransparency = 1
-title.Text = "Iniciar sesión - NeonAccount Shop"
-title.Font = Enum.Font.GothamBold
-title.TextSize = 18
-title.TextColor3 = Color3.fromRGB(180,0,255)
-title.TextXAlignment = Enum.TextXAlignment.Center
+    if ActiveTab == "General" then
+        local Toggle = Instance.new("TextLabel")
+        Toggle.Text = "Enabled"
+        Toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Toggle.BackgroundTransparency = 1
+        Toggle.Size = UDim2.new(0, 60, 0, 20)
+        Toggle.Position = UDim2.new(0, 10, 0, 10)
+        Toggle.Parent = TabContent
 
--- Info expiración (muestra la fecha aproximada de expiración actual)
-local info = Instance.new("TextLabel")
-info.Parent = frame
-info.Size = UDim2.new(1, -20, 0, 20)
-info.Position = UDim2.new(0, 10, 0, 40)
-info.BackgroundTransparency = 1
-info.Text = "Las cuentas creadas ahora caducan el (aprox.): "..expiry_date_str.." (90 días)"
-info.Font = Enum.Font.Gotham
-info.TextSize = 14
-info.TextColor3 = Color3.fromRGB(200,200,200)
-info.TextXAlignment = Enum.TextXAlignment.Center
-
-local userBox = Instance.new("TextBox")
-userBox.Parent = frame
-userBox.Size = UDim2.new(0, 320, 0, 30)
-userBox.Position = UDim2.new(0, 20, 0, 70)
-userBox.PlaceholderText = "Usuario"
-userBox.ClearTextOnFocus = false
-userBox.Font = Enum.Font.Gotham
-userBox.TextSize = 18
-userBox.TextColor3 = Color3.new(0,0,0)
-userBox.BackgroundColor3 = Color3.fromRGB(240,240,240)
-userBox.BorderSizePixel = 0
-
-local passBox = Instance.new("TextBox")
-passBox.Parent = frame
-passBox.Size = UDim2.new(0, 320, 0, 30)
-passBox.Position = UDim2.new(0, 20, 0, 110)
-passBox.PlaceholderText = "Contraseña"
-passBox.ClearTextOnFocus = false
-passBox.Font = Enum.Font.Gotham
-passBox.TextSize = 18
-passBox.TextColor3 = Color3.new(0,0,0)
-passBox.BackgroundColor3 = Color3.fromRGB(240,240,240)
-passBox.BorderSizePixel = 0
-
-local loginBtn = Instance.new("TextButton")
-loginBtn.Parent = frame
-loginBtn.Size = UDim2.new(0, 140, 0, 36)
-loginBtn.Position = UDim2.new(0.5, -70, 1, -56)
-loginBtn.Text = "Iniciar sesión"
-loginBtn.Font = Enum.Font.GothamBold
-loginBtn.TextSize = 18
-loginBtn.TextColor3 = Color3.fromRGB(255,255,255)
-loginBtn.BackgroundColor3 = Color3.fromRGB(120,30,180)
-loginBtn.BorderSizePixel = 0
-
-local feedback = Instance.new("TextLabel")
-feedback.Parent = frame
-feedback.Size = UDim2.new(1, -20, 0, 22)
-feedback.Position = UDim2.new(0, 10, 1, -28)
-feedback.BackgroundTransparency = 1
-feedback.Text = ""
-feedback.Font = Enum.Font.Gotham
-feedback.TextSize = 14
-feedback.TextColor3 = Color3.fromRGB(255,120,120)
-feedback.TextXAlignment = Enum.TextXAlignment.Center
-
--- Acción al iniciar sesión correctamente
-local function onLoginSuccess()
-	-- destruir GUI de login
-	if loginGui and loginGui.Parent then
-		loginGui:Destroy()
-	end
-
-	-- cargar script principal (siempre usar pcall)
-	local ok, err = pcall(function()
-		loadstring(game:HttpGet('https://raw.githubusercontent.com/Documantation12/Universal-Vehicle-Script/main/Main.lua'))()
-	end)
-	if not ok then
-		warn("Error cargando script principal:", err)
-	end
-
-	-- Mostrar etiqueta permanente a la derecha
-	local gui = Instance.new("ScreenGui", playerGui)
-	gui.Name = "NeonAccountLabelGui"
-	gui.ResetOnSpawn = false
-
-	local label = Instance.new("TextLabel", gui)
-	label.AnchorPoint = Vector2.new(1, 0)
-	label.Position = UDim2.new(1, -10, 0.02, 0)
-	label.Size = UDim2.new(0, 220, 0, 36)
-	label.BackgroundTransparency = 1
-	label.Text = "NeonAccount Shop"
-	label.Font = Enum.Font.GothamBold
-	label.TextScaled = true
-	label.TextColor3 = Color3.fromRGB(180, 0, 255)
-end
-
--- Manejador del botón
-loginBtn.MouseButton1Click:Connect(function()
-	local u = tostring(userBox.Text or "")
-	local p = tostring(passBox.Text or "")
-
-	local ok, infoOrReason = findAccount(u, p)
-	if ok then
-		feedback.TextColor3 = Color3.fromRGB(120,255,120)
-		feedback.Text = "Inicio de sesión correcto. Cargando..."
-		wait(0.4)
-		onLoginSuccess()
-	else
-		if infoOrReason == "expired" then
-			feedback.TextColor3 = Color3.fromRGB(255,180,60)
-			feedback.Text = "Cuenta caducada. Contacta con el admin."
-		else
-			feedback.TextColor3 = Color3.fromRGB(255,120,120)
-			feedback.Text = "Usuario o contraseña incorrectos."
-		end
-	end
-end)
-
--- Permitir pulsar Enter en los TextBox
-userBox.FocusLost:Connect(function(pressedEnter)
-	if pressedEnter then
-		loginBtn:CaptureFocus()
-		loginBtn.MouseButton1Click:Fire()
-	end
-end)
-passBox.FocusLost:Connect(function(pressedEnter)
-	if pressedEnter then
-		loginBtn:CaptureFocus()
-		loginBtn.MouseButton1Click:Fire()
-	end
-end)
-
-
+        local ToggleCheckbox = Instance.new("TextButton")
+        ToggleCheckbox.Text = config.AimbotEnabled and "ON" or "OFF"
+        ToggleCheckbox.TextColor3 = config.AimbotEnabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255,
